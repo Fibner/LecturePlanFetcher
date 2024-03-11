@@ -24,22 +24,30 @@ let downloadFile = async () => {
 }
 
 // Function to calculate the hash of the pdf and compare it with the previous hash
-let compareFiles = async () => {
-    const hash = crypto.createHash('sha256');
-    const fileStream = fs.createReadStream('./plan.pdf');
-    fileStream.on('data', (data) => {
-        hash.update(data);
-    });
-    fileStream.on('end', () => {
-        const fileHash = hash.digest('hex');
-        if(currenHash == null){
-            currenHash = fileHash;
-            console.log("Initialized file hash: " + currenHash);
-        }
-        if(currenHash != fileHash){
-            console.log("File has changed, sending message",currenHash, fileHash);
-            currenHash = fileHash;
-        }
+let compareFiles = () => {
+    return new Promise((res) => {
+        const hash = crypto.createHash('sha256');
+        const fileStream = fs.createReadStream('./plan.pdf');
+        fileStream.on('data', (data) => {
+            hash.update(data);
+        });
+        fileStream.on('end', async () => {
+            const fileHash = hash.digest('hex');
+            if(currenHash == null){
+                currenHash = fileHash;
+                console.log("Initialized file hash: " + currenHash);
+            }
+            if(currenHash != fileHash){
+                console.log("File has changed, sending message");
+                await fetch(config.webhook, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ content: config.message}),
+                });
+                currenHash = fileHash;
+            }
+            res();
+        });
     });
 }
 
@@ -47,8 +55,8 @@ let compareFiles = async () => {
 await downloadFile();
 await compareFiles();
 
-// Download and compare the files every hour
+// Download and compare the files every day
 setInterval(async () => {
     await downloadFile();
     await compareFiles();
-}, 3600000);
+}, 86400000);
