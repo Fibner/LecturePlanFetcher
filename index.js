@@ -59,4 +59,4 @@ await compareFiles();
 setInterval(async () => {
     await downloadFile();
     await compareFiles();
-}, 86400000);
+}, config.hourFrequency*60*60*1000);
